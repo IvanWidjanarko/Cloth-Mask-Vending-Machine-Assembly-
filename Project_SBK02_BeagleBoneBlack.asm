@@ -1,0 +1,287 @@
+INPUT		EQU P3					; Matrix Keypad menggunakan Port 3 (bit 0 hingga bit 6)
+COUNTER		EQU 0					; Counter di R0
+D		EQU P1					; Pin D pada LCD 16x2 menggunakan Port 1 (bit 0 hingga bit 7)
+RS		EQU P2.0				; Pin RS pada LCD 16x2 menggunakan Port 2 bit 0
+RW		EQU P2.1				; Pin RW pada LCD 16x2 menggunakan Port 2 bit 1
+ENA		EQU P2.2				; Pin E pada LCD 16x2 menggunakan Port 2 bit 2
+SERVO_DIR_1	EQU P2.5				; Pin Direction 1 pada Servo menggunakan Port 2 bit 5
+SERVO_MOVE	EQU P2.6				; Pin Move pada Servo menggunakan Port 2 bit 6
+SERVO_DIR_2	EQU P2.7				; Pin Direction 2 pada Servo menggunakan Port 2 bit 7
+Port_Matrix	EQU P0					; LED_Matrix menggunakan Port 3 (bit 0-3 untuk Row, bit 4-7 untuk Column)
+Clear_1		EQU 0FFH				; Menset nilai ke FFH
+Mode		EQU 01H					; Mode Timer (TMOD)
+Time_A		EQU 0FCH				; Konstanta untuk delay dengan timer
+Time_B		EQU 066H				; Konstanta untuk delay dengan timer
+Clear_0		EQU 00H					; Menset nilai ke 00H
+
+	ORG 00H						; Instruksi dimulai dari alamat 00H
+INIT:
+	MOV Port_Matrix,#Clear_Delay			; Mengclearkan LED Matrix
+	MOV A, #038H					; Menggunakan kedua baris dan setiap karakter berukuran 5x7 pixel pada LCD 16x2
+	LCALL perintah_LCD				; Memanggil subroutine perintah_LCD
+	MOV A, #0EH					; Layar menyala dan kursor kedap-kedip pada LCD 16x2
+	LCALL perintah_LCD				; Memanggil subroutine perintah_LCD
+	MOV A, #01H					; Meng-clear-kan layar pada LCD 16x2
+	LCALL perintah_LCD				; Memanggil subroutine perintah_LCD
+	MOV A, #080H					; Kursor dipindahkan ke paling awal dari baris pertamapada LCD 16x2
+	LCALL perintah_LCD				; Memanggil subroutine perintah_LCD
+	MOV DPTR, #TAMPILAN1				; Menyalin isi dari TAMPILAN1 ke DPTR
+	LCALL HEM					; Memanggil fungsi HEM
+	MOV A, #0C0H					; Kursor dipindahkan ke paling awal baris kedua pada LCD 16x2
+	LCALL perintah_LCD				; Memanggil subroutine perintah_LCD
+	MOV DPTR, #TAMPILAN2				; Menyalin isi dari TAMPILAN2 ke DPTR
+	LCALL HEM					; Memanggil subroutine HEM
+	LCALL LOOPDE					; Memanggil subroutine LOOPDE
+INIT2:	MOV A, #001H					; Meng-clear-kan layar pada LCD 16x2
+	LCALL perintah_LCD				; Memanggil subroutine perintah_LCD
+	MOV A, #80H					; Kursor dipindahkan ke paling awal dari baris pertamapada LCD 16x2
+	LCALL perintah_LCD				; Memanggil subroutine perintah_LCD
+	MOV DPTR, #TAMPILAN3				; Menyalin isi dari TAMPILAN3 ke DPTR
+	LCALL HEM					; Memanggil subroutine HEM
+	MOV A, #0C0H					; Kursor dipindahkan ke paling awal baris kedua pada LCD 16x2
+	LCALL perintah_LCD				; Memanggil fungsi perintah_LCD
+	SJMP MAINAN					; Lompat ke label MAINAN
+HEM:							; Subroutine HEM
+	LCALL wait					; Memanggil subroutine wait
+	CLR A						; Mengclearkan Accumulator
+	MOVC A, @A+DPTR					; Menyalin isi dari alamat A+DPTR ke Accumulator
+	JZ DONEE					; Lompat ke label DONEE jika A = 0
+	LCALL print_LCD					; Memanggil subroutine print_LCD
+	INC DPTR					; Menambahkan nilai DPTR dengan 1
+	SJMP HEM					; Lompat ke label HEM
+DONEE:	RET						; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+wait:							; Subroutine wait
+		MOV R1, #CLEAR_1			; Menyalin 0FFH ke R1
+	wow1:	MOV R2, #00FH				; Menyalin 00FH ke R2
+	wow2:	DJNZ R2, wow2				; Mengurangi nilai R2 dan lompat ke label wow2 jika R2 = 0
+		DJNZ R1, wow1				; Mengurangi nilai R1 dan lompat ke label wow2 jika R1 = 0
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+perintah_LCD:						; Subroutine perintah_LCD
+		LCALL wait				; Memanggil subroutine wait
+		MOV D, A				; Menyalin isi dari Accumulator ke D
+		CLR RS					; Menset nilai 0 untuk pin RS pada LCD 16x2
+		CLR RW					; Menset nilai 0 untuk pin RW pada LCD 16x2
+		SETB ENA				; Menset nilai 1 untuk pin E pada LCD 16x2
+		CLR ENA					; Menset nilai 0 untuk pin E pada LCD 16x2
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+print_LCD:						; Subroutine print_LCD
+		LCALL wait				; Memanggil subroutine wait
+		MOV D, A				; Menyalin isi dari Accumulator ke D
+		SETB RS					; Menset nilai 1 untuk pin RS pada LCD 16x2
+		CLR RW					; Menset nilai 0 untuk pin RW pada LCD 16x2
+		SETB ENA				; Menset nilai 1 untuk pin E pada LCD 16x2
+		CLR ENA					; Menset nilai 0 untuk pin E pada LCD 16x2
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+		
+MAINAN:		MOV	COUNTER, #10H			; Menyalin 10H ke COUNTER (Alamat 0)
+MAIN:		LCALL	KEYPAD				; Memanggil subroutine KEYPAD
+		CJNE	A, #11, ANGKA			; Membandingkan nilai Accumulator dengan 11. Jika tidak sama, maka lompat ke label ANGKA
+		LJMP	MAIN				; Lompat ke label MAIN
+		
+;UNTUK MENYIMPAN NPM
+ANGKA:		MOV R6, #CLEAR_1			; Menyalin 0FFH ke R6 untuk delay
+		LCALL	LOOPSV				; Memanggil subroutine LOOPSV
+		MOV R6, #02FH				; Menyalin 02FH ke R6 untuk delay
+		LCALL	LOOPSV				; Memanggil subroutine LOOPSV
+		XRL	A, #30H				; Melakukan instruksi XOR agar menjadi ASCII dan kemudian disimpan ke Accumulator
+		LCALL	print_LCD			; Memanggil subroutine print_LCD
+		MOV	@R0, A				; Menyalin nilai Accumulator ke alamat dari isi RO
+		INC	COUNTER				; Menambahkan nilai COUNTER dengan 1
+		CJNE	R0, #1AH, MAIN			; Membandingkan nilai R0 dengan 1AH. Jika tidak sama, maka lompat ke label MAIN
+		LCALL	KOMPER				; Memanggil subroutine KOMPER
+		LJMP	INIT2				; Lompat ke label INIT2
+
+;FUNGSI UNTUK MELAKUKAN COMPARE DENGAN NPM DATA
+KOMPER:							; Subroutine KOMPER
+		MOV DPTR, #NPM				; Menyalin isi dari NPM ke DPTR
+	LUPLUP:	MOV COUNTER, #10H			; Menyalin 10H ke COUNTER
+	LUP:	CLR A					; Menset nilai 0 untuk Accumulator
+		MOVC A, @A+DPTR				; Menyalin isi dari alamat A+DPTR ke Accumulator 
+		MOV 1, @R0				; Menyalin isi dalam alamat pada R0 ke alamat 1
+		CJNE A, 1, KELUP			; Membandingkan nilai Accumulator dengan nilai di alamat 1. Jika tidak sama, maka lompat ke label KELUP
+		INC COUNTER				; Menambahkan nilai COUNTER dengan 1
+		INC DPTR				; Menambahkan nilai DPTR dengan 1
+		CJNE R0, #1AH, LUP			; Membandingkan nilai R0 dengan 1AH. Jika tidak sama, maka lompat ke label LUP
+		MOV A, #01H				; Meng-clear-kan layar pada LCD 16x2
+		LCALL perintah_LCD			; Memanggil subroutine perintah_LCD
+		MOV A, #80H				; Kursor dipindahkan ke paling awal dari baris pertama pada LCD 16x2
+		LCALL perintah_LCD			; Memanggil subroutine perintah_LCD
+		MOV DPTR,#TAMPILAN4			; Menyalin isi dari TAMPILAN4 ke DPTR
+		LCALL HEM				; Memanggil subroutine HEM
+		LCALL OVRES				; Memanggil subroutine OVRES
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+	KELUP:	JZ KELK					; Lompat ke label KELS jika A = 0
+		CLR C					; Menset nilai 0 untuk C
+		CLR AC					; Menset nilai 0 untuk AC
+		MOV A, #1AH				; Menyalin 1AH ke Accumulator
+		SUBB A, COUNTER				; Mengurangi A dengan COUNTER dan hasilnya diletakkan di Accumulator
+		ADD A, DPL				; Menambah Accumulator dengan DPL dan hasilnya diletakkan di Accumulator
+		MOV DPL, A				; Menyalin nilai di Accumulator ke DPL
+		SJMP LUPLUP				; Lompat ke label LUPLUP
+	KELK:	MOV A, #01H				; Menyalin 01H ke Accumulator
+		LCALL perintah_LCD			; Memanggil subroutine Perintah_LCD
+		MOV A, #80H				; Kursor dipindahkan ke paling awal dari baris pertama pada LCD 16x2
+		LCALL perintah_LCD			; Memanggil subroutine perintah_LCD
+		MOV DPTR,#TAMPILAN5			; Menyalin isi dari TAMPILAN5 ke DPTR
+		LCALL HEM				; Memanggil subroutine HEM
+		MOV R5,#75D				; Menyalin 75D ke R5 untuk looping
+	X:	LCALL MATRIKX				; Memanggil subroutine MATRIKX
+		DJNZ R5, X				; Mengurangi nilai R5 dan lompat ke label X jika R5 = 0
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+	
+;FUNGSI UNTUK MEMBACA KEYPAD
+KEYPAD:		MOV INPUT,#CLEAR_1			; Menyalin 0FFH ke INPUT
+		CLR INPUT.0				; Menset nilai 0 untuk port INPUT bit 0
+		JNB INPUT.4,SATU			; Jika pada port INPUT bit 4 sama dengan 0, maka lompat ke label SATU
+		JNB INPUT.5,DUA				; Jika pada port INPUT bit 5 sama dengan 0, maka lompat ke label DUA
+		JNB INPUT.6,TIGA			; Jika pada port INPUT bit 6 sama dengan 0, maka lompat ke label TIGA
+		JNB INPUT.7,AA				; Jika pada port INPUT bit 7 sama dengan 0, maka lompat ke label AA
+		SETB INPUT.0				; Menset nilai 1 untuk port INPUT bit 0
+		CLR INPUT.1				; Menset nilai 0 untuk port INPUT bit 1
+		JNB INPUT.4,EMPAT			; Jika pada port INPUT bit 4 sama dengan 0, maka lompat ke label EMPAT
+		JNB INPUT.5,LIMA			; Jika pada port INPUT bit 5 sama dengan 0, maka lompat ke label LIMA
+		JNB INPUT.6,ENAM			; Jika pada port INPUT bit 6 sama dengan 0, maka lompat ke label ENAM
+		JNB INPUT.7,BB				; Jika pada port INPUT bit 7 sama dengan 0, maka lompat ke label BB
+		SETB INPUT.1				; Menset nilai 1 untuk port INPUT bit 1
+		CLR INPUT.2				; Menset nilai 0 untuk port INPUT bit 2
+		JNB INPUT.4,TUJUH			; Jika pada port INPUT bit 4 sama dengan 0, maka lompat ke label TUJUH
+		JNB INPUT.5,LAPAN			; Jika pada port INPUT bit 5 sama dengan 0, maka lompat ke label LAPAN
+		JNB INPUT.6,SEMBIL			; Jika pada port INPUT bit 6 sama dengan 0, maka lompat ke label SEMBIL
+		JNB INPUT.7,CC				; Jika pada port INPUT bit 7 sama dengan 0, maka lompat ke label CC
+		SETB INPUT.2				; Menset nilai 1 untuk port INPUT bit 2
+		CLR INPUT.3				; Menset nilai 0 untuk port INPUT bit 3
+		JNB INPUT.4,TITIK			; Jika pada port INPUT bit 4 sama dengan 0, maka lompat ke label TITIK
+		JNB INPUT.5,NOL				; Jika pada port INPUT bit 5 sama dengan 0, maka lompat ke label NOL
+		JNB INPUT.6,PAGER			; Jika pada port INPUT bit 6 sama dengan 0, maka lompat ke label PAGER
+		JNB INPUT.7,DD				; Jika pada port INPUT bit 7 sama dengan 0, maka lompat ke label DD
+		SETB INPUT.3				; Menset nili 1 untuk port INPUT bit 3
+		MOV A, #11				; Menyalin nilai 11 ke Accumulator
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+
+	NOL:	MOV A, #0				; Menyalin nilai 0 ke Accumulator
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+	SATU:	MOV A, #1				; Menyalin nilai 1 ke Accumulator
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+	DUA:	MOV A, #2				; Menyalin nilai 2 ke Accumulator
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+	TIGA:	MOV A, #3				; Menyalin nilai 3 ke Accumulator
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+	EMPAT:	MOV A, #4				; Menyalin nilai 4 ke Accumulator
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+	LIMA:	MOV A, #5				; Menyalin nilai 5 ke Accumulator
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+	ENAM:	MOV A, #6				; Menyalin nilai 6 ke Accumulator
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+	TUJUH:	MOV A, #7				; Menyalin nilai 7 ke Accumulator
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+	LAPAN:	MOV A, #8				; Menyalin nilai 8 ke Accumulator
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+	SEMBIL:	MOV A, #9				; Menyalin nilai 9 ke Accumulator
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+	AA:	MOV A, #11				; Menyalin nilai 11 ke Accumulator
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+	BB:	MOV A, #11				; Menyalin nilai 11 ke Accumulator
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+	CC:	MOV A, #11				; Menyalin nilai 11 ke Accumulator
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+	DD:	MOV A, #11				; Menyalin nilai 11 ke Accumulator
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+	TITIK:	MOV A, #11				; Menyalin nilai 11 ke Accumulator
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+	PAGER:	MOV A, #11				; Menyalin nilai 11 ke Accumulator
+		RET					; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+
+OVRES:
+	CLR SERVO_DIR_2					; Menset nilai 0 untuk Port 2 bit 7 agar Servo bergerak
+	CLR SERVO_MOVE					; Menset nilai 0 untuk Port 2 bit 6 agar Servo berputar ke kanan
+	ACALL LOOPDE					; Memanggil subroutine LOOPDE
+	ACALL LOOPDE					; Memanggil subroutine LOOPDE
+	MOV R6,#59D					; Menyalin nilai 59D ke R6 untuk delay
+	ACALL LOOPSV					; Memanggil subroutine LOOPSV
+	SETB SERVO_MOVE					; Menset nilai 1 untuk Port 2 bit 6
+	SETB SERVO_DIR_2				; Menset nilai 1 untuk Port 2 bit 7
+
+	MOV R5,#50D					; Menyalin nilai 50D ke R5 untuk looping
+O:	ACALL MATRIKO					; Memanggil subroutine MATRIKO
+	DJNZ R5, O					; Mengurangi nilai R5 dan lompat ke label O jika R5 = 0
+
+	CLR SERVO_DIR_1					; Menset nilai 0 untuk Port 2 bit 5 agar Servo kembali ke posisi semula
+	CLR SERVO_MOVE					; Menset nilai 0 untuk Port 2 bit 6 agar Servo berputar ke kiri
+	ACALL LOOPDE					; Memanggil subroutine LOOPDE
+	ACALL LOOPDE					; Memanggil subroutine LOOPDE
+	MOV R6,#123D					; Menyalin nilai 123D ke R6 untuk delay
+	ACALL LOOPSV					; Memanggil subroutine LOOPSV
+	SETB SERVO_MOVE					; Menset nilai 1 untuk Port 2 bit 6
+	SETB SERVO_DIR_1				; Menset nilai 1 untuk Port 2 bit 5
+
+	ACALL LOOPDE					; Memanggil subroutine LOOPDE
+	RET						; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+
+MATRIKX:						; Subroutine MATRIKX
+	MOV Port_Matrix,#0E9H				; Menyalin 0E9H ke Port 0 untuk mencetak simbol X
+	MOV R6,#10H					; Menyalin nilai 10H ke R6 untuk delay
+	ACALL LOOPSV					; Memanggil subroutine LOOPSV
+	MOV Port_Matrix,#0D6H				; Menyalin 0D6H ke Port 0 untuk mencetak simbol X
+	MOV R6,#10H					; Menyalin nilai 10H ke R6 untuk delay
+	ACALL LOOPSV					; Memanggil subroutine LOOPSV
+      	MOV Port_Matrix,#0B6H				; Menyalin 0B6H ke Port 0 untuk mencetak simbol X
+      	MOV R6,#10H					; Menyalin nilai 10H ke R6 untuk delay
+	ACALL LOOPSV					; Memanggil subroutine LOOPSV
+      	MOV Port_Matrix,#079H				; Menyalin 079H ke Port 0 untuk mencetak simbol X
+      	MOV R6,#10H					; Menyalin nilai 10H ke R6 untuk delay
+	ACALL LOOPSV					; Memanggil subroutine LOOPSV
+	MOV Port_Matrix,#CLEAR_0			; Menyalin 00H ke Port 0 untuk meng-clear-kan LED Dot Matrix
+      	RET						; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+
+MATRIKO:MOV Port_Matrix,#0E6H				; Menyalin 0E6H ke Port 0 untuk mencetak simbol O
+	MOV R6,#10H					; Menyalin nilai 10H ke R6 untuk delay
+	ACALL LOOPSV					; Memanggil subroutine LOOPSV
+	MOV Port_Matrix,#0D9H				; Menyalin 0D9H ke Port 0 untuk mencetak simbol O
+	MOV R6,#10H					; Menyalin nilai 10H ke R6 untuk delay
+	ACALL LOOPSV					; Memanggil subroutine LOOPSV
+      	MOV Port_Matrix,#0B9H				; Menyalin 0B9H ke Port 0 untuk mencetak simbol O
+      	MOV R6,#10H					; Menyalin nilai 10H ke R6 untuk delay
+	ACALL LOOPSV					; Memanggil subroutine LOOPSV
+      	MOV Port_Matrix,#076H				; Menyalin 076H ke Port 0 untuk mencetak simbol O
+      	MOV R6,#10H					; Menyalin nilai 10H ke R6 untuk delay
+	ACALL LOOPSV					; Memanggil subroutine LOOPSV
+	MOV Port_Matrix,#CLEAR_0			; Menyalin 00H ke Port 0 untuk men-clear-kan LED Dot Matrix
+      	RET						; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+
+LOOPDE:							; Subroutine LOOPDE
+	MOV R6,#10D					; Menyalin nilai 10D ke R6
+ITER:	MOV R7,#100D					; Menyalin nilai 100D ke R7
+LOOP:	ACALL DELAY					; Memanggil subroutine DELAY
+	DJNZ R7,LOOP					; Mengurangi nilai R7 dan lompat ke label LOOP jika R7 = 0
+	DJNZ R6,ITER					; Mengurangi nilai R6 dan lompat ke label ITER jika R6 = 0
+	RET						; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+
+LOOPSV:							; Subroutine LOOPSV
+	ACALL DELAY					; Memanggil subroutine DELAY
+	DJNZ R6,LOOPSV					; Mengurangi nilai R7 dan lompat ke label LOOP jika R7 = 0
+	RET						; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+
+DELAY: 	MOV TMOD,#MODE					; Memilih Mode 1, yaitu timer 16-bit
+       	MOV TH0,#TIME_A					; Menyalin nilai 0FCH ke TH0
+       	MOV TL0,#TIME_B					; Menyalin nilai 066H ke TL0
+       	SETB TR0					; Menset nilai 1 untuk TR0 (menyalakan timer)
+HERE: 	JNB TF0,HERE					; Jika nilai TF0 tidak sama dengan 0, maka lompat ke label HERE (menghitung mundur timer)
+      	CLR TR0						; Menset nilai 0 untuk TR0 (mematikan timer)
+      	CLR TF0						; Menset nilai 0 untuk TF0
+      	RET						; Keluar dari subroutine dan nilai PC sebelumnya di pop kembali
+
+;DEFINE VARIABEL
+	ORG 	0A00H					; Memulai dari alamat 0A00H
+NPM:	DB '1806148694'					; Data NPM Pertama
+	DB '1806148706'					; Data NPM Kedua
+	DB '1806148712'					; Data NPM Ketiga
+	DB '1806199953'					; Data NPM Keempat
+	DB 0						; Data 0
+
+TAMPILAN1:	DB 'SALAM,MAHASISWA!',0			; Isi dari TAMPILAN1
+TAMPILAN2:	DB '     START!     ',0			; Isi dari TAMPILAN2
+TAMPILAN3:	DB 'MASUKAN NPM:',0			; Isi dari TAMPILAN3
+TAMPILAN4:	DB 'SILAHKAN AMBIL',0			; Isi dari TAMPILAN4
+TAMPILAN5:	DB 'NPM SALAH',0			; Isi dari TAMPILAN5
+
+END							; Akhir dari program secara keseluruhan
