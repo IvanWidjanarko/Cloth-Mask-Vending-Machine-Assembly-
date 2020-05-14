@@ -35,9 +35,7 @@ Untuk code dari program kami ini, dapat diakses dari https://bit.ly/Proyek_SBK02
 
 Untuk video presentasi dari program kami ini, dapat diakses dari https://bit.ly/Proyek_SBK02_BeagleBoneBlack_Video
 
-<iframe width="420" height="315"
-src="https://www.youtube.com/embed/N-QcJWBDcuQ">
-</iframe> 
+<iframe width="560" height="315" src="https://www.youtube.com/embed/N-QcJWBDcuQ" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ## Laporan Proyek Akhir
 
