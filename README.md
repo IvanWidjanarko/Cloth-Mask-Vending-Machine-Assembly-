@@ -34,3 +34,7 @@ Untuk code dari program kami ini, dapat diakses dari https://bit.ly/Proyek_SBK02
 ## Video Presentasi
 
 Untuk video presentasi dari program kami ini, dapat diakses dari https://bit.ly/Proyek_SBK02_BeagleBoneBlack_Video
+
+<iframe width="420" height="315"
+src="https://bit.ly/Proyek_SBK02_BeagleBoneBlack_Video">
+</iframe> 
